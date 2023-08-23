@@ -4,7 +4,17 @@ let socket = require('socket.io');
 let app = express();
 let server = app.listen(4000);
 app.use(express.static('public'));
-let io = socket(server);
+let io = new socket.Server(server, {
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+    transports: ['websocket', 'polling'],
+    credentials: false
+  }
+
+});
 
 io.on('connection', (socket) => {
   console.log('made socket connection', socket.id);
