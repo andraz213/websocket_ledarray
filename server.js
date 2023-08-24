@@ -19,7 +19,21 @@ let io = new socket.Server(server, {
 io.on('connection', (socket) => {
   console.log('made socket connection', socket.id);
   socket.on('pixels', (data) => {
-    console.log(data);
     socket.broadcast.emit('pixels', data);
+  });
+
+  socket.on('pixelsp', (data) => {
+    console.log("dataaaa",data);
+    if(data == "undefined:1"){
+      return;
+    }
+    let str = data.msg.replaceAll("'", "\"" );
+    console.log(str);
+
+    let jsonmessage = JSON.parse(str);
+    console.log(jsonmessage);
+    console.log(jsonmessage.length);
+
+    socket.broadcast.emit('pixels', jsonmessage);
   });
 });
