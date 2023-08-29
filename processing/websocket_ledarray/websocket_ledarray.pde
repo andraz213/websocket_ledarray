@@ -4,11 +4,17 @@ PImage img;
 float[][][] sentPixels;
 float[][][] cur_pixels;
 PFont myfont;
+import gifAnimation.*;
+Gif loopingGif;
+int rndScl = 1;
+int w = 64;
+int h = 32;
+
 
 void setup(){
   String[] fontList = PFont.list();
   printArray(fontList);
-  myFont = createFont("Roboto-Thin", 32);
+  myfont = createFont("Roboto-Regular", 64);
   img = loadImage("back.png");
   frameRate(60);
   size(64, 32);
@@ -28,7 +34,9 @@ void setup(){
       cur_pixels[i][j][2] = 0.0;
     }
   }
-
+  
+  loopingGif = new Gif(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
+  loopingGif.loop();
 }
 
 
@@ -105,13 +113,14 @@ int emitPixels(int limit){
         }
       }*/
       
-      color c = get(i,j);
+      color c = get(i * rndScl,j * rndScl);
           float cr = red(c);
           float cg = green(c);
           float cb = blue(c);
-      r = cr;
-      g = cg;
-      b = cb;
+          
+      r = cr/3;
+      g = cg/3;
+      b = cb/3;
       
       
       toSend[j][i][0] = r;
@@ -156,8 +165,8 @@ int emitPixels(int limit){
 
 
     if(firstDiff >= 0){
-          println("firstDiff", firstDiff);
-println("lastDiff", lastDiff);
+          //println("firstDiff", firstDiff);
+      //println("lastDiff", lastDiff);
       String strmessage = "";
       strmessage += hex(j, 2);
       strmessage += hex(firstDiff, 2);
@@ -175,11 +184,11 @@ println("lastDiff", lastDiff);
       
       String sendBuff = arraytoJson(jsonmessage);
       if(sendBuff.length() > limit) {
-        println(sendBuff.length());
+        //println(sendBuff.length());
         sendedLen += sendBuff.length();
       try{
         String msg = "42[\"pixelsp\",{\"msg\":\""+sendBuff+"\"}]";
-        println("sending: ",msg.length());
+        //println("sending: ",msg.length());
         socket.sendMessage(msg);
         }catch (Exception e){
       println(e);
@@ -198,11 +207,11 @@ println("lastDiff", lastDiff);
   
   String sendBuff = arraytoJson(jsonmessage);
       if(sendBuff.length() > 0) {
-        println(sendBuff.length());
+        //println(sendBuff.length());
         sendedLen += sendBuff.length();
       try{
         String msg = "42[\"pixelsp\",{\"msg\":\""+sendBuff+"\"}]";
-        println("sending: ",msg.length());
+        //println("sending: ",msg.length());
         socket.sendMessage(msg);
         }catch (Exception e){
       println(e);
@@ -217,8 +226,8 @@ println("lastDiff", lastDiff);
 
   }
   long stop = millis();
-  println("time", stop - start);
-  println("sendedLen", sendedLen);
+  //println("time", stop - start);
+  //println("sendedLen", sendedLen);
   return sendedLen;
 
 }
@@ -250,10 +259,11 @@ return res;
 
 int prevSend = 0;
 void draw(){
+    weatherGif();
   fill(50,20,50);
   textFont(myfont, 128);
-  textSize(20);
-  background(0);
+  textSize(11*rndScl);
+  //background(0);
   String prt = hour() +"";
   if(second()%2 == 0){
   prt+=":";
@@ -265,18 +275,19 @@ void draw(){
   }
   prt += minute();
   
-  text(prt, 1, 30);
+  text(prt, 1*rndScl, 30*rndScl);
+
 
   //image(img, 0, 0, 64, 32);
   //console.log(frameRate());
-  checkMouse();
-  drawPixels();
-  if(frameCount % 3 == 0){
+  //checkMouse();
+  //drawPixels();
+  if(frameCount % 1 == 0){
     long start = millis();
     prevSend *= 0.9;
     prevSend += emitPixels(20000 - prevSend);
     long stop = millis();
-    println("time emitting:", stop - start);
+    //println("time emitting:", stop - start);
   }
 
   /*socket.on('pixels', (data) => {
@@ -331,4 +342,45 @@ void webSocketEvent(String msg){
       //processJson(json); //Process the JSON object somewhere else to do some magic with it
     }
   }
+}
+
+
+
+
+
+int weatherPrevMinutes = 0;
+int ljBr = 255;
+void weatherGif(){
+  image(loopingGif, -19*rndScl, -17*rndScl, 110*rndScl, 62*rndScl);
+  stroke(255,255,255);
+  stroke(255,255,255, 255);
+      for(int i = 0;i<rndScl; i++){
+        for(int j = 0;j<rndScl; j++){
+          int x = 31 * rndScl;
+            x+= i;
+              int y = 15 * rndScl;
+                y += j; 
+                  
+                  float cr = abs(ljBr);
+                  float cb = abs(ljBr);
+                  float cg = abs(ljBr);
+     
+          color d = color(cr,cg,cb);
+      set(x, y, d);
+    }
+  }
+  ljBr-=5;
+  if(ljBr <= -255){
+   ljBr = 255;
+  }
+  
+
+  if(minute() != weatherPrevMinutes){
+      loopingGif = new Gif(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
+  loopingGif.loop();
+  weatherPrevMinutes = minute();
+  println("UPDATED");
+  }
+
+
 }
