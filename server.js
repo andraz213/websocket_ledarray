@@ -23,17 +23,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('pixelsp', (data) => {
-    console.log("dataaaa",data);
-    if(data == "undefined:1"){
-      return;
-    }
     let str = data.msg.replaceAll("'", "\"" );
-    console.log(str);
+    console.log(str.length);
+    if(str.length > 0){
+      let jsonmessage = JSON.parse(str);
 
-    let jsonmessage = JSON.parse(str);
-    console.log(jsonmessage);
-    console.log(jsonmessage.length);
+      socket.broadcast.emit('pixels', jsonmessage);
+    }
 
-    socket.broadcast.emit('pixels', jsonmessage);
+
   });
 });
