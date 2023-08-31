@@ -8,14 +8,24 @@ Gif loopingGif;
 Gif nyanGif;
 int rndScl = 10;
 PImage[] animation;
-
+import http.requests.*;
+JSONObject json;
 
 void setup() {
+  PostRequest post = new PostRequest("https://www.strava.com/api/v3/oauth/token");
+  post.addData("client_id", "93677");
+  post.addData("client_secret", "97e1deaece2d915d09f7e6fc5a1380e8359300f2");
+  post.addData("refresh_token", "c2d3ad2b56d75e5a3df956872a886502cd568f8b");
+  post.addData("grant_type", "refresh_token");
+  post.send();
+  String ji = post.getContent();
+  println(ji);
+  json = parseJSONObject(ji);
+  
+  println(json);
   initFontb();
-  String[] fontList = PFont.list();
-  printArray(fontList);
   myfont = createFont("Roboto-Regular", 64);
-  frameRate(60);
+  frameRate(50);
   size(64, 32);
   rndScl = width / 64;
   background(0);
@@ -37,13 +47,26 @@ void setup() {
 
   loopingGif = new Gif(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
   
-  nyanGif = new Gif(this, "https://i0.wp.com/www.printmag.com/wp-content/uploads/2021/02/4cbe8d_f1ed2800a49649848102c68fc5a66e53mv2.gif");
-  //nyanGif = new Gif(this, "./loop.gif");
+  //nyanGif = new Gif(this, "https://i0.wp.com/www.printmag.com/wp-content/uploads/2021/02/4cbe8d_f1ed2800a49649848102c68fc5a66e53mv2.gif");
+  nyanGif = new Gif(this, "./loop.gif");
   loopingGif.loop();
   
  nyanGif.loop();
   animation = Gif.getPImages(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
   println(animation.length);
+}
+
+void draw() {
+  weatherGif();
+  nyanGif();
+  //background(140);
+  int delim = 1;
+  if(mousePressed == true){
+    delim = 5;
+  }
+  if (frameCount % delim == 0) {
+    emitPixels();
+  }
 }
 
 float maxDiff = 0;
@@ -62,9 +85,9 @@ float[][][] writeToSend() {
       float cg = green(c);
       float cb = blue(c);
 
-      r = cr/3;
-      g = cg/3;
-      b = cb/3;
+      r = cr/1;
+      g = cg/1;
+      b = cb/1;
 
       toSend[j][i][0] = r;
       toSend[j][i][1] = g;
@@ -101,6 +124,11 @@ void emitPixels() {
           firstDiff = i;
         }
       }
+    }
+    
+    if(j == 31 && jsonmessage.length == 0){
+    firstDiff = 0;
+    lastDiff = 1;
     }
 
     if (firstDiff >= 0) {
@@ -165,15 +193,7 @@ String arraytoJson(String[] in) {
 
 
 
-void draw() {
-  weatherGif();
-  //nyanGif();
-  //background(140);
 
-  if (frameCount % 1 == 0) {
-    emitPixels();
-  }
-}
 
 void webSocketEvent(String msg) {
   println("- " + msg);
@@ -257,14 +277,14 @@ void drawClock(int br) {
    set(49, i-128, color(200,200-i,i));
    }
    set(45, i, color(200,200-i,i));
-   }
+   }*/
 
 
-  for (int i = 0; i<32; i++) {
-    for (int j = 0; j<64; j++) {
-      int x = j;
-      int y = i;
-      set(x,y, color(i * 8, j * 4, ljBr));
+  /*for (int i = 0; i<32; i++) {
+    for (int j = 0; j<32; j++) {
+      int x = j * 2;
+      int y = i * 2;
+      set(x,y, color(i * 8, j * 8, ljBr));
     }
   }*/
 

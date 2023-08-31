@@ -20,8 +20,14 @@
 WiFiMulti WiFiMulti;
 SocketIOclient socketIO;
 
+const int bufferSize = 35;
+
 uint8_t current_image[2048];
 uint8_t pixels[64][32][3];
+uint8_t buffer[bufferSize][64][32][3];
+bool copyToBuffer = false;
+long frameTimes[1000];
+int frameTimesInd = 0;
 
 #define HEIGHT 32   // Matrix height (pixels) - SET TO 64 FOR 64x64 MATRIX!
 #define WIDTH 64    // Matrix width (pixels)
@@ -54,7 +60,9 @@ uint8_t oePin = 14;
 Adafruit_Protomatter matrix(
   WIDTH, 4, 1, rgbPins, NUM_ADDR_PINS, addrPins,
   clockPin, latchPin, oePin, true);
+long prev_m = 0;
 
+int frame_ind = 0;
 
 void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length) {
   switch (type) {
@@ -115,6 +123,7 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length) 
           }
         }*/
         int ps = 5;
+        bool has_frame = false;
         if (ps > length) {
           return;
         }
@@ -146,6 +155,13 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length) 
 
             int c = start;
             while ((char)payload[ps] != '"') {
+              if (!has_frame) {
+                frame_ind++;
+                has_frame = true;
+                copyToBuffer = true;
+                frameTimes[frameTimesInd % 1000] = millis();
+                frameTimesInd++;
+              }
               int pixel_r = charToInt((char)payload[ps]) * 16 + charToInt((char)payload[ps + 1]);
               int pixel_g = charToInt((char)payload[ps + 2]) * 16 + charToInt((char)payload[ps + 3]);
               int pixel_b = charToInt((char)payload[ps + 4]) * 16 + charToInt((char)payload[ps + 5]);
@@ -167,8 +183,6 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length) 
             ps = incrementPS(ps, payload);
           }
         }
-
-
 
 
 
@@ -228,26 +242,8 @@ void setup() {
   for (uint8_t t = 4; t > 0; t--) {
     USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
     USE_SERIAL.flush();
-    delay(1000);
+    delay(200);
   }
-  int r = 0;
-  long start1 = micros();
-  for (int i = 0; i < 100000; i++) {
-    r = charToInt('8');
-  }
-  long stop1 = micros();
-  char os = '8';
-  long start2 = micros();
-  for (int i = 0; i < 100000; i++) {
-    r = atoi(&os);
-  }
-  long stop2 = micros();
-
-  Serial.print("my function: ");
-  Serial.print(stop1 - start1);
-  Serial.print("  atoi: ");
-  Serial.print(stop2 - start2);
-  Serial.println();
 
 
 
@@ -255,7 +251,8 @@ void setup() {
 
   //WiFi.disconnect();
   while (WiFiMulti.run() != WL_CONNECTED) {
-    delay(100);
+    delay(200);
+    Serial.print(".");
   }
 
   String ip = WiFi.localIP().toString();
@@ -272,11 +269,25 @@ void setup() {
   matrix.show();
 }
 
-
+int displayed = 0;
 long prev_disp = 0;
 unsigned long messageTimestamp = 0;
+bool waitBuffer = false;
+long frameDelay = 10;
 void loop() {
   socketIO.loop();
+
+  if (copyToBuffer) {
+    int buff_i = frame_ind % bufferSize;
+    for (int i = 0; i < 64; i++) {
+      for (int j = 0; j < 32; j++) {
+        buffer[buff_i][i][j][0] = pixels[i][j][0];
+        buffer[buff_i][i][j][1] = pixels[i][j][1];
+        buffer[buff_i][i][j][2] = pixels[i][j][2];
+      }
+    }
+    copyToBuffer = false;
+  }
 
   uint64_t now = millis();
 
@@ -306,20 +317,65 @@ void loop() {
     USE_SERIAL.println(output);
   }
 
-  if (millis() - prev_disp > 19) {
+  if (frame_ind <= displayed) {
+    waitBuffer = true;
+  }
+
+  if (waitBuffer && frame_ind > displayed + (bufferSize-2)) {
+    waitBuffer = false;
+  }
+  if (!waitBuffer) {
+    drawMatrix();
+  }
+}
+
+void drawMatrix() {
+  if (frame_ind > displayed + (bufferSize-2) || (millis() - prev_disp > frameDelay && frame_ind > displayed)) {
+    Serial.print(frame_ind - displayed);
+    Serial.print(" ");
+    Serial.print(frameDelay);
+    Serial.print(" ");
+    Serial.println(millis() - prev_disp);
+    displayed++;
+    int to_disp = displayed % bufferSize;
+
     prev_disp = millis();
     long start = micros();
     for (int i = 0; i < 64; i++) {
       for (int j = 0; j < 32; j++) {
 
-        matrix.drawPixel(i, j, matrix.color565(pixels[i][j][0], pixels[i][j][1], pixels[i][j][2]));
+        matrix.drawPixel(i, j, matrix.color565(buffer[to_disp][i][j][0], buffer[to_disp][i][j][1], buffer[to_disp][i][j][2]));
       }
     }
     matrix.show();
   }
+  calculateFPS();
 }
 
+void calculateFPS() {
+  float framesLastSecond = 0;
+  long min = millis();
+  for (int i = 0; i < 1000; i++) {
+    if (min > frameTimes[i]) {
+      min = frameTimes[i];
+    }
+    if (millis() - frameTimes[i] < 5000) {
+      framesLastSecond+=0.2;
+    }
+  }
+  float delta = millis() - min;
+  frameDelay = 10;
+  if (millis() - min > 1000) {
+    frameDelay = floor(delta / 1000);
+  }
+  if (framesLastSecond > 0) {
+    float difffframeDelay = 1000.0 / framesLastSecond;
 
+    if (abs(difffframeDelay - frameDelay) / difffframeDelay > 0.3) {
+      frameDelay = difffframeDelay;
+    }
+  }
+}
 
 
 int charToInt(char c) {
