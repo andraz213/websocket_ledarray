@@ -27,6 +27,7 @@ io.on('connection', (socket) => {
     console.log(str.length);
     if(str.length > 0){
       let jsonmessage = JSON.parse(str);
+      //console.log(jsonmessage);
 
       socket.broadcast.emit('pixels', jsonmessage);
     }

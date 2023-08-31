@@ -76,22 +76,30 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length) 
         if (id) {
           payload = (uint8_t *)sptr;
         }
+        /*
+        long starts = micros();
         DynamicJsonDocument doc(1024);
         DeserializationError error = deserializeJson(doc, payload, length);
+        long stops = micros();
+        Serial.print("serialization: ");
+        Serial.println(stops - starts);
         if (error) {
           USE_SERIAL.print(F("deserializeJson() failed: "));
           USE_SERIAL.println(error.c_str());
           return;
         }
 
-
+       
         for (int ri = 0; ri < doc[1].size(); ri++) {
+          long startsd = micros();
           String pay = doc[1][ri];
+          long stopsd = micros();
+                  Serial.print("get row: ");
+        Serial.println(stopsd - startsd);
           int row = strtol(pay.substring(0, 2).c_str(), NULL, 16);
           int start = strtol(pay.substring(2, 4).c_str(), NULL, 16);
           int c = start;
           for (int i = 4; i < pay.length(); i += 6) {
-
             int k = i;
             int pixel_r = strtol(pay.substring(k, k + 2).c_str(), NULL, 16);
             int pixel_g = strtol(pay.substring(k + 2, k + 4).c_str(), NULL, 16);
@@ -104,6 +112,59 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length) 
             pixels[x][y][0] = pixel_r;
             pixels[x][y][1] = pixel_g;
             pixels[x][y][2] = pixel_b;
+          }
+        }*/
+        int ps = 5;
+        if (ps > length) {
+          return;
+        }
+
+        while ((char)payload[ps] != '[') {
+          ps = incrementPS(ps, payload);
+          if (ps > length) {
+            return;
+          }
+        }
+
+        while ((char)payload[ps] != ']') {
+          if (ps > length) {
+            return;
+          }
+          if ((char)payload[ps] == '"') {
+            ps = incrementPS(ps, payload);
+            int row = charToInt((char)payload[ps]);
+            row *= 16;
+            ps = incrementPS(ps, payload);
+            row += charToInt((char)payload[ps]);
+            ps = incrementPS(ps, payload);
+
+            int start = charToInt((char)payload[ps]);
+            start *= 16;
+            ps = incrementPS(ps, payload);
+            start += charToInt((char)payload[ps]);
+            ps = incrementPS(ps, payload);
+
+            int c = start;
+            while ((char)payload[ps] != '"') {
+              int pixel_r = charToInt((char)payload[ps]) * 16 + charToInt((char)payload[ps + 1]);
+              int pixel_g = charToInt((char)payload[ps + 2]) * 16 + charToInt((char)payload[ps + 3]);
+              int pixel_b = charToInt((char)payload[ps + 4]) * 16 + charToInt((char)payload[ps + 5]);
+
+              int x = c % 64;
+              int y = row;
+              c++;
+              pixels[x][y][0] = pixel_r;
+              pixels[x][y][1] = pixel_g;
+              pixels[x][y][2] = pixel_b;
+              for (int i = 0; i < 6; i++) {
+                ps = incrementPS(ps, payload);
+              }
+            }
+            while (payload[ps] != ',') {
+              ps = incrementPS(ps, payload);
+            }
+          } else {
+            ps = incrementPS(ps, payload);
           }
         }
 
@@ -131,7 +192,6 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length) 
         }
         long stop = micros();
         Serial.println(stop - start);
-        Serial.println((stop - start) * 32);
       }
       break;
     case sIOtype_ACK:
@@ -170,6 +230,26 @@ void setup() {
     USE_SERIAL.flush();
     delay(1000);
   }
+  int r = 0;
+  long start1 = micros();
+  for (int i = 0; i < 100000; i++) {
+    r = charToInt('8');
+  }
+  long stop1 = micros();
+  char os = '8';
+  long start2 = micros();
+  for (int i = 0; i < 100000; i++) {
+    r = atoi(&os);
+  }
+  long stop2 = micros();
+
+  Serial.print("my function: ");
+  Serial.print(stop1 - start1);
+  Serial.print("  atoi: ");
+  Serial.print(stop2 - start2);
+  Serial.println();
+
+
 
   WiFiMulti.addAP("rolika", "nandrazzz");
 
@@ -226,8 +306,9 @@ void loop() {
     USE_SERIAL.println(output);
   }
 
-  if (millis() - prev_disp > 20) {
-
+  if (millis() - prev_disp > 19) {
+    prev_disp = millis();
+    long start = micros();
     for (int i = 0; i < 64; i++) {
       for (int j = 0; j < 32; j++) {
 
@@ -236,4 +317,50 @@ void loop() {
     }
     matrix.show();
   }
+}
+
+
+
+
+int charToInt(char c) {
+  if (c == '0')
+    return 0;
+  if (c == '1')
+    return 1;
+  if (c == '2')
+    return 2;
+  if (c == '3')
+    return 3;
+  if (c == '4')
+    return 4;
+  if (c == '5')
+    return 5;
+  if (c == '6')
+    return 6;
+  if (c == '7')
+    return 7;
+  if (c == '8')
+    return 8;
+  if (c == '9')
+    return 9;
+  if (c == 'A')
+    return 10;
+  if (c == 'B')
+    return 11;
+  if (c == 'C')
+    return 12;
+  if (c == 'D')
+    return 13;
+  if (c == 'E')
+    return 14;
+  if (c == 'F')
+    return 15;
+}
+
+
+
+int incrementPS(int ps, uint8_t *payload) {
+  ps++;
+  //Serial.print((char)payload[ps]);
+  return ps;
 }

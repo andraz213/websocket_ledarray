@@ -5,6 +5,7 @@ float[][][] sentPixels;
 PFont myfont;
 import gifAnimation.*;
 Gif loopingGif;
+Gif nyanGif;
 int rndScl = 10;
 PImage[] animation;
 
@@ -14,7 +15,7 @@ void setup() {
   String[] fontList = PFont.list();
   printArray(fontList);
   myfont = createFont("Roboto-Regular", 64);
-  frameRate(24);
+  frameRate(60);
   size(64, 32);
   rndScl = width / 64;
   background(0);
@@ -35,7 +36,12 @@ void setup() {
   }
 
   loopingGif = new Gif(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
+  
+  nyanGif = new Gif(this, "https://i0.wp.com/www.printmag.com/wp-content/uploads/2021/02/4cbe8d_f1ed2800a49649848102c68fc5a66e53mv2.gif");
+  //nyanGif = new Gif(this, "./loop.gif");
   loopingGif.loop();
+  
+ nyanGif.loop();
   animation = Gif.getPImages(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
   println(animation.length);
 }
@@ -110,8 +116,10 @@ void emitPixels() {
         sentPixels[i][j][1] = g;
         sentPixels[i][j][2] = b;
       }
-
-      jsonmessage = append(jsonmessage, strmessage);
+      if(strmessage.length() > 0){
+        jsonmessage = append(jsonmessage, strmessage);
+      }
+      
     }
   }
   if (jsonmessage.length > 0) {
@@ -159,7 +167,8 @@ String arraytoJson(String[] in) {
 
 void draw() {
   weatherGif();
-  drawClock();
+  //nyanGif();
+  //background(140);
 
   if (frameCount % 1 == 0) {
     emitPixels();
@@ -177,6 +186,10 @@ void weatherGif() {
   image(loopingGif, -19*rndScl, -19*rndScl, 111*rndScl, 65*rndScl);
   stroke(255, 255, 255);
   stroke(255, 255, 255, 255);
+  ljBr = abs(millis()%10200 - 5100);
+  ljBr /= 20;
+
+
   for (int i = 0; i<rndScl; i++) {
     for (int j = 0; j<rndScl; j++) {
       int x = 31 * rndScl;
@@ -187,14 +200,13 @@ void weatherGif() {
       set(x, y, d);
     }
   }
-  ljBr-=5;
-  if (ljBr <= -150) {
-    ljBr = 150;
-  }
+  
+  drawClock(0);
 
 
   if (minute() != weatherPrevMinutes) {
     loopingGif = new Gif(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
+    
     loopingGif.loop();
 
     animation = Gif.getPImages(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
@@ -204,7 +216,17 @@ void weatherGif() {
   }
 }
 
-void drawClock() {
+void nyanGif() {
+  float hn = 60;
+  float wn = hn * 1.7;
+  float xn = (32 - hn) / 2;
+  float yn = (64- wn) / 2;
+  
+  image(nyanGif, yn, xn,  wn, hn);
+  drawClock(255);
+}
+
+void drawClock(int br) {
   String prt = hour() +"";
   if (second()%2 == 0) {
     prt+=":";
@@ -218,7 +240,38 @@ void drawClock() {
   stroke(255);
   fill(255);
   //rect(0,24,21,32);
-  drawString(prt, 0, 24, color(0));
-  //drawString("bla.bla.blablalbal.balbalalb.labla", 1, 1, color(0));
+  //background(0);
+  drawString(prt, 0, 24, color(br));
+  //drawString(str(ljBr), 1, 1, color(50));
+  /*for (int i = 0; i<ljBr; i++) {
+   if (i> 31) {
+   set(46, 63 - i, color(200,200-i,i));
+   }
+   if (i > 63) {
+   set(47, i - 64, color(200,200-i,i));
+   }
+   if (i> 95) {
+   set(48, 128 - i, color(200,200-i,i));
+   }
+   if (i> 127) {
+   set(49, i-128, color(200,200-i,i));
+   }
+   set(45, i, color(200,200-i,i));
+   }
+
+
+  for (int i = 0; i<32; i++) {
+    for (int j = 0; j<64; j++) {
+      int x = j;
+      int y = i;
+      set(x,y, color(i * 8, j * 4, ljBr));
+    }
+  }*/
+
+
+
+
+
+
   //drawString(str(millis()), 1, 10, color(0));
 }
