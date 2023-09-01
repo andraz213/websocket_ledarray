@@ -47,8 +47,8 @@ void setup() {
 
   loopingGif = new Gif(this, "https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif");
   
-  //nyanGif = new Gif(this, "https://i0.wp.com/www.printmag.com/wp-content/uploads/2021/02/4cbe8d_f1ed2800a49649848102c68fc5a66e53mv2.gif");
-  nyanGif = new Gif(this, "./loop.gif");
+  nyanGif = new Gif(this, "https://i0.wp.com/www.printmag.com/wp-content/uploads/2021/02/4cbe8d_f1ed2800a49649848102c68fc5a66e53mv2.gif");
+  //nyanGif = new Gif(this, "./loop.gif");
   loopingGif.loop();
   
  nyanGif.loop();
@@ -85,9 +85,9 @@ float[][][] writeToSend() {
       float cg = green(c);
       float cb = blue(c);
 
-      r = cr/1;
-      g = cg/1;
-      b = cb/1;
+      r = cr/2;
+      g = cg/2;
+      b = cb/2;
 
       toSend[j][i][0] = r;
       toSend[j][i][1] = g;
@@ -237,10 +237,10 @@ void weatherGif() {
 }
 
 void nyanGif() {
-  float hn = 60;
+  float hn = 75;
   float wn = hn * 1.7;
   float xn = (32 - hn) / 2;
-  float yn = (64- wn) / 2;
+  float yn = (80 - wn) / 2;
   
   image(nyanGif, yn, xn,  wn, hn);
   drawClock(255);
@@ -280,11 +280,11 @@ void drawClock(int br) {
    }*/
 
 
-  /*for (int i = 0; i<32; i++) {
+  /*for (int i = 0; i<16; i++) {
     for (int j = 0; j<32; j++) {
       int x = j * 2;
       int y = i * 2;
-      set(x,y, color(i * 8, j * 8, ljBr));
+      set(x,y, color(i * 16, j * 8, ljBr));
     }
   }*/
 
